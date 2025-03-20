@@ -12,11 +12,6 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { pdf2img, img2pdf } from '@pdfme/converter';
 import { merge, split } from '@pdfme/manipulator';
 
-console.log('pdf2img', pdf2img);
-console.log('img2pdf', img2pdf);
-console.log('merge', merge);
-console.log('split', split);
-
 const ToolInputSchema = ToolSchema.shape.inputSchema;
 type ToolInput = z.infer<typeof ToolInputSchema>;
 
@@ -30,10 +25,10 @@ const tools = {
     description: "Test tool",
     schema: TestArgsSchema,
     handler: (args: z.infer<typeof TestArgsSchema>) => {
-      return { content: [{ type: "text", text: "test" }] };
+      return { content: [{ type: "text", text: args.test }] };
     },
   },
-  // 他のツールを追加する場合はこのオブジェクトに追加
+  // Add other tools to this object
 } as const;
 
 // Server setup
@@ -77,9 +72,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 // Start server
 async function runServer() {
+  console.log('pdf2img', pdf2img);
+  console.log('img2pdf', img2pdf);
+  console.log('merge', merge);
+  console.log('split', split);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.log("Server started");
+  console.log("Server started!");
 }
 
 runServer().catch((error) => {

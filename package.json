@@ -20,9 +20,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
-    "@pdfme/common": "^5.3.13",
-    "@pdfme/converter": "^5.3.13",
-    "@pdfme/manipulator": "^5.3.13",
+    "@pdfme/common": "^5.3.14",
+    "@pdfme/converter": "^5.3.14",
+    "@pdfme/manipulator": "^5.3.14",
     "canvas": "^2.11.2",
     "glob": "^10.3.10",
     "zod-to-json-schema": "^3.23.5"
