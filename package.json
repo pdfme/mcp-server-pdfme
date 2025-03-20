@@ -8,7 +8,7 @@
   "bugs": "https://github.com/pdfme/mcp-server-pdfme/issues",
   "type": "module",
   "bin": {
-    "mcp-server-filesystem": "dist/index.js"
+    "mcp-server-pdfme": "dist/index.js"
   },
   "files": [
     "dist"
@@ -19,10 +19,12 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "0.5.0",
-    "diff": "^5.1.0",
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "@pdfme/common": "^5.3.13",
+    "@pdfme/converter": "^5.3.13",
+    "@pdfme/manipulator": "^5.3.13",
+    "canvas": "^2.11.2",
     "glob": "^10.3.10",
-    "minimatch": "^10.0.1",
     "zod-to-json-schema": "^3.23.5"
   },
   "devDependencies": {

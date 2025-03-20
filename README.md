@@ -1,146 +1,101 @@
-# Filesystem MCP Server
+# PDF MCP Server
 
-Node.js server implementing Model Context Protocol (MCP) for filesystem operations.
+Node.js server implementing Model Context Protocol (MCP) for PDF operations using the pdfme library.
 
 ## Features
 
-- Read/write files
-- Create/list/delete directories
-- Move files/directories
-- Search files
-- Get file metadata
+- PDF Manipulation:
+  - Merge multiple PDFs
+  - Split PDF into multiple documents
+  - Remove pages from PDF
+  - Rotate PDF pages
+  - Organize PDF (multiple operations)
+  
+- Format Conversion:
+  - Convert PDF to JPG/PNG images
+  - Convert JPG/PNG images to PDF
 
-**Note**: The server will only allow operations within directories specified via `args`.
+Note: The server will only allow operations within directories specified via command-line arguments.
 
 ## API
 
 ### Resources
 
-- `file://system`: File system operations interface
+- `pdf://operations`: PDF operations interface
 
 ### Tools
 
-- **read_file**
-  - Read complete contents of a file
-  - Input: `path` (string)
-  - Reads complete file contents with UTF-8 encoding
+- **merge_pdfs**
+  - Merge multiple PDF files into one
+  - Input:
+    - `paths` (string[]): Paths to PDF files to merge
+    - `outputPath` (string): Path to save the merged PDF
 
-- **read_multiple_files**
-  - Read multiple files simultaneously
-  - Input: `paths` (string[])
-  - Failed reads won't stop the entire operation
+- **split_pdf**
+  - Split a PDF into multiple PDFs based on page ranges
+  - Input:
+    - `path` (string): Path to the PDF file to split
+    - `ranges` (array): Array of page ranges, e.g., `[{start: 0, end: 2}, {start: 3, end: 5}]`
+    - `outputPattern` (string): Pattern for output files, e.g., "/path/to/output_{index}.pdf"
 
-- **write_file**
-  - Create new file or overwrite existing (exercise caution with this)
-  - Inputs:
-    - `path` (string): File location
-    - `content` (string): File content
+- **remove_pages**
+  - Remove specified pages from a PDF
+  - Input:
+    - `path` (string): Path to the PDF file
+    - `pages` (number[]): Pages to remove (0-indexed)
+    - `outputPath` (string): Path to save the modified PDF
 
-- **edit_file**
-  - Make selective edits using advanced pattern matching and formatting
-  - Features:
-    - Line-based and multi-line content matching
-    - Whitespace normalization with indentation preservation
-    - Fuzzy matching with confidence scoring
-    - Multiple simultaneous edits with correct positioning
-    - Indentation style detection and preservation
-    - Git-style diff output with context
-    - Preview changes with dry run mode
-    - Failed match debugging with confidence scores
-  - Inputs:
-    - `path` (string): File to edit
-    - `edits` (array): List of edit operations
-      - `oldText` (string): Text to search for (can be substring)
-      - `newText` (string): Text to replace with
-    - `dryRun` (boolean): Preview changes without applying (default: false)
-    - `options` (object): Optional formatting settings
-      - `preserveIndentation` (boolean): Keep existing indentation (default: true)
-      - `normalizeWhitespace` (boolean): Normalize spaces while preserving structure (default: true)
-      - `partialMatch` (boolean): Enable fuzzy matching (default: true)
-  - Returns detailed diff and match information for dry runs, otherwise applies changes
-  - Best Practice: Always use dryRun first to preview changes before applying them
+- **rotate_pdf**
+  - Rotate pages in a PDF
+  - Input:
+    - `path` (string): Path to the PDF file
+    - `degrees` (0|90|180|270|360): Rotation angle
+    - `pages` (number[]): Pages to rotate (0-indexed, optional - all pages if not specified)
+    - `outputPath` (string): Path to save the rotated PDF
 
-- **create_directory**
-  - Create new directory or ensure it exists
-  - Input: `path` (string)
-  - Creates parent directories if needed
-  - Succeeds silently if directory exists
+- **organize_pdf**
+  - Perform multiple operations on a PDF
+  - Input:
+    - `path` (string): Path to the PDF file
+    - `actions` (array): Array of operations (remove, insert, replace, rotate, move)
+    - `outputPath` (string): Path to save the modified PDF
 
-- **list_directory**
-  - List directory contents with [FILE] or [DIR] prefixes
-  - Input: `path` (string)
+- **pdf_to_images**
+  - Convert PDF to images (JPEG or PNG)
+  - Input:
+    - `path` (string): Path to the PDF file
+    - `outputDir` (string): Directory to save the images
+    - `outputFormat` (string): "jpeg" or "png"
+    - `scale` (number): Scale factor (optional)
+    - `range` (object): Page range to convert (optional)
 
-- **move_file**
-  - Move or rename files and directories
-  - Inputs:
-    - `source` (string)
-    - `destination` (string)
-  - Fails if destination exists
-
-- **search_files**
-  - Recursively search for files/directories
-  - Inputs:
-    - `path` (string): Starting directory
-    - `pattern` (string): Search pattern
-    - `excludePatterns` (string[]): Exclude any patterns. Glob formats are supported.
-  - Case-insensitive matching
-  - Returns full paths to matches
-
-- **get_file_info**
-  - Get detailed file/directory metadata
-  - Input: `path` (string)
-  - Returns:
-    - Size
-    - Creation time
-    - Modified time
-    - Access time
-    - Type (file/directory)
-    - Permissions
+- **images_to_pdf**
+  - Convert images to PDF
+  - Input:
+    - `paths` (string[]): Paths to image files
+    - `outputPath` (string): Path to save the PDF
+    - `scale` (number): Scale factor (optional)
+    - `size` (object): Page size in mm (optional)
+    - `margin` (array): Margins in mm [top, right, bottom, left] (optional)
 
 - **list_allowed_directories**
   - List all directories the server is allowed to access
   - No input required
-  - Returns:
-    - Directories that this server can read/write from
 
-## Usage with Claude Desktop
-Add this to your `claude_desktop_config.json`:
+## Setup for Claude Desktop Users
 
-Note: you can provide sandboxed directories to the server by mounting them to `/projects`. Adding the `ro` flag will make the directory readonly by the server.
+To use this MCP server with Claude Desktop:
 
-### Docker
-Note: all directories must be mounted to `/projects` by default.
+1. Build the server (see Build section below)
+2. Add the server configuration to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "docker",
+    "pdfme": {
+      "command": "node",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--mount", "type=bind,src=/Users/username/Desktop,dst=/projects/Desktop",
-        "--mount", "type=bind,src=/path/to/other/allowed/dir,dst=/projects/other/allowed/dir,ro",
-        "--mount", "type=bind,src=/path/to/file.txt,dst=/projects/path/to/file.txt",
-        "mcp/filesystem",
-        "/projects"
-      ]
-    }
-  }
-}
-```
-
-### NPX
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
+        "/path/to/mcp-server-pdfme/dist/index.js",
         "/Users/username/Desktop",
         "/path/to/other/allowed/dir"
       ]
@@ -149,14 +104,21 @@ Note: all directories must be mounted to `/projects` by default.
 }
 ```
 
+For more information on setting up MCP servers with Claude Desktop, visit: https://modelcontextprotocol.io/quickstart/user
+
 ## Build
 
-Docker build:
+```bash
+npm install
+npm run build
+```
+
+## Run
 
 ```bash
-docker build -t mcp/filesystem -f src/filesystem/Dockerfile .
+node dist/index.js /path/to/allowed/directory1 /path/to/allowed/directory2
 ```
 
 ## License
 
-This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+This MCP server is licensed under the ISC License.
