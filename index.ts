@@ -10,12 +10,12 @@ import {
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { pdf2img, img2pdf } from '@pdfme/converter';
-import manipulator from '@pdfme/manipulator';
+import { merge, split } from '@pdfme/manipulator';
 
 console.log('pdf2img', pdf2img);
 console.log('img2pdf', img2pdf);
-console.log('merge', manipulator.merge);
-console.log('split', manipulator.split);
+console.log('merge', merge);
+console.log('split', split);
 
 const ToolInputSchema = ToolSchema.shape.inputSchema;
 type ToolInput = z.infer<typeof ToolInputSchema>;
