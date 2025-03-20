@@ -1,9 +1,11 @@
 // MCP Server for PDF operations
-import { createMcpServer } from '@modelcontextprotocol/sdk';
-import * as path from 'path';
-import * as manipulator from './lib/manipulator';
-import * as converter from './lib/converter';
-import { validatePath } from './lib/fileUtils';
+const path = require('path');
+const manipulator = require('./lib/manipulator');
+const converter = require('./lib/converter');
+const { validatePath } = require('./lib/fileUtils');
+
+// Import MCP SDK using CommonJS require
+const { createMcpServer } = require('@modelcontextprotocol/sdk');
 
 // Get allowed directories from command line arguments
 const allowedDirs = process.argv.slice(2).map((dir: string) => path.resolve(dir));

@@ -1,46 +1,10 @@
-import * as manipulator from '@pdfme/manipulator';
-import { readFileAsBuffer, writeBufferToFile } from './fileUtils';
-
-export interface MergeParams {
-  paths: string[];
-  outputPath: string;
-}
-
-export interface SplitParams {
-  path: string;
-  ranges: { start?: number; end?: number }[];
-  outputPattern: string;
-}
-
-export interface RemoveParams {
-  path: string;
-  pages: number[];
-  outputPath: string;
-}
-
-export interface RotateParams {
-  path: string;
-  degrees: 0 | 90 | 180 | 270 | 360;
-  pages?: number[];
-  outputPath: string;
-}
-
-export interface OrganizeParams {
-  path: string;
-  actions: Array<
-    | { type: 'remove'; data: { position: number } }
-    | { type: 'insert'; data: { pdf: string; position: number } }
-    | { type: 'replace'; data: { pdf: string; position: number } }
-    | { type: 'rotate'; data: { position: number; degrees: 0 | 90 | 180 | 270 | 360 } }
-    | { type: 'move'; data: { from: number; to: number } }
-  >;
-  outputPath: string;
-}
+const manipulator = require('@pdfme/manipulator');
+const { readFileAsBuffer, writeBufferToFile } = require('./fileUtils');
 
 /**
  * Merge multiple PDFs into one
  */
-export const merge = async (params: MergeParams): Promise<string> => {
+const merge = async (params) => {
   const { paths, outputPath } = params;
 
   const pdfBuffers = await Promise.all(paths.map(path => readFileAsBuffer(path)));
@@ -53,13 +17,13 @@ export const merge = async (params: MergeParams): Promise<string> => {
 /**
  * Split a PDF into multiple PDFs based on page ranges
  */
-export const split = async (params: SplitParams): Promise<string[]> => {
+const split = async (params) => {
   const { path, ranges, outputPattern } = params;
 
   const pdfBuffer = await readFileAsBuffer(path);
   const splitPdfs = await manipulator.split(pdfBuffer, ranges);
   
-  const outputPaths: string[] = [];
+  const outputPaths = [];
   
   for (let i = 0; i < splitPdfs.length; i++) {
     const rangePath = outputPattern.replace('{index}', i.toString());
@@ -73,7 +37,7 @@ export const split = async (params: SplitParams): Promise<string[]> => {
 /**
  * Remove specified pages from a PDF
  */
-export const remove = async (params: RemoveParams): Promise<string> => {
+const remove = async (params) => {
   const { path, pages, outputPath } = params;
 
   const pdfBuffer = await readFileAsBuffer(path);
@@ -86,7 +50,7 @@ export const remove = async (params: RemoveParams): Promise<string> => {
 /**
  * Rotate pages in a PDF
  */
-export const rotate = async (params: RotateParams): Promise<string> => {
+const rotate = async (params) => {
   const { path, degrees, pages, outputPath } = params;
 
   const pdfBuffer = await readFileAsBuffer(path);
@@ -99,7 +63,7 @@ export const rotate = async (params: RotateParams): Promise<string> => {
 /**
  * Perform multiple operations on a PDF
  */
-export const organize = async (params: OrganizeParams): Promise<string> => {
+const organize = async (params) => {
   const { path, actions, outputPath } = params;
 
   const pdfBuffer = await readFileAsBuffer(path);
@@ -121,8 +85,16 @@ export const organize = async (params: OrganizeParams): Promise<string> => {
     })
   );
   
-  const organizedPdf = await manipulator.organize(pdfBuffer, processedActions as any);
+  const organizedPdf = await manipulator.organize(pdfBuffer, processedActions);
   
   await writeBufferToFile(outputPath, organizedPdf);
   return outputPath;
+};
+
+module.exports = {
+  merge,
+  split,
+  remove,
+  rotate,
+  organize
 };
