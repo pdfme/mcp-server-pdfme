@@ -4,8 +4,150 @@ const manipulator = require('./lib/manipulator');
 const converter = require('./lib/converter');
 const { validatePath } = require('./lib/fileUtils');
 
-// Import MCP SDK using CommonJS require
-const { createMcpServer } = require('@modelcontextprotocol/sdk');
+// Custom implementation of MCP server since we're having issues with the SDK package
+function createMcpServer() {
+  const resources = {};
+  
+  return {
+    registerResource: (resourceId, resourceFn) => {
+      resources[resourceId] = resourceFn;
+    },
+    
+    listen: ({ stdin, stdout, stderr }) => {
+      console.log('Starting PDF MCP Server with allowed directories:');
+      allowedDirs.forEach((dir) => console.log(` - ${dir}`));
+      
+      // Set up stdin to receive messages
+      stdin.setEncoding('utf8');
+      
+      // Handle incoming messages
+      let buffer = '';
+      stdin.on('data', (chunk) => {
+        buffer += chunk;
+        
+        // Process complete JSON messages
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+          const message = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          
+          try {
+            const request = JSON.parse(message);
+            handleRequest(request, stdout);
+          } catch (error) {
+            stderr.write(`Error processing message: ${error.message}\n`);
+          }
+        }
+      });
+      
+      // Handle requests according to MCP protocol
+      async function handleRequest(request, stdout) {
+        if (request.method === 'initialize') {
+          // Respond to initialize request
+          const response = {
+            jsonrpc: '2.0',
+            id: request.id,
+            result: {
+              protocolVersion: request.params.protocolVersion,
+              serverInfo: {
+                name: 'mcp-server-pdfme',
+                version: '1.0.0'
+              },
+              capabilities: {}
+            }
+          };
+          stdout.write(JSON.stringify(response) + '\n');
+        } else if (request.method === 'getResource') {
+          // Handle resource request
+          const resourceId = request.params.resourceId;
+          if (resources[resourceId]) {
+            try {
+              const resource = await resources[resourceId]();
+              const response = {
+                jsonrpc: '2.0',
+                id: request.id,
+                result: { resource }
+              };
+              stdout.write(JSON.stringify(response) + '\n');
+            } catch (error) {
+              const response = {
+                jsonrpc: '2.0',
+                id: request.id,
+                error: {
+                  code: -32603,
+                  message: `Error getting resource: ${error.message}`
+                }
+              };
+              stdout.write(JSON.stringify(response) + '\n');
+            }
+          } else {
+            const response = {
+              jsonrpc: '2.0',
+              id: request.id,
+              error: {
+                code: -32602,
+                message: `Resource not found: ${resourceId}`
+              }
+            };
+            stdout.write(JSON.stringify(response) + '\n');
+          }
+        } else if (request.method === 'callTool') {
+          // Handle tool call
+          const { resourceId, toolName, params } = request.params;
+          
+          if (!resources[resourceId]) {
+            const response = {
+              jsonrpc: '2.0',
+              id: request.id,
+              error: {
+                code: -32602,
+                message: `Resource not found: ${resourceId}`
+              }
+            };
+            stdout.write(JSON.stringify(response) + '\n');
+            return;
+          }
+          
+          try {
+            const resource = await resources[resourceId]();
+            if (!resource[toolName]) {
+              const response = {
+                jsonrpc: '2.0',
+                id: request.id,
+                error: {
+                  code: -32602,
+                  message: `Tool not found: ${toolName}`
+                }
+              };
+              stdout.write(JSON.stringify(response) + '\n');
+              return;
+            }
+            
+            const result = await resource[toolName].fn(params);
+            const response = {
+              jsonrpc: '2.0',
+              id: request.id,
+              result: { value: result }
+            };
+            stdout.write(JSON.stringify(response) + '\n');
+          } catch (error) {
+            const response = {
+              jsonrpc: '2.0',
+              id: request.id,
+              error: {
+                code: -32603,
+                message: `Error calling tool: ${error.message}`
+              }
+            };
+            stdout.write(JSON.stringify(response) + '\n');
+          }
+        }
+      }
+      
+      console.log('PDF MCP Server started and listening for commands');
+    }
+  };
+}
 
 // Get allowed directories from command line arguments
 const allowedDirs = process.argv.slice(2).map((dir: string) => path.resolve(dir));

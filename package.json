@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "MCP server for PDF operations using pdfme",
   "main": "dist/index.js",
-
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -19,8 +18,10 @@
   "license": "ISC",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
+    "@pdfme/common": "^5.3.13",
     "@pdfme/converter": "^5.3.13",
-    "@pdfme/manipulator": "^5.3.13"
+    "@pdfme/manipulator": "^5.3.13",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",
