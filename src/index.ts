@@ -14,6 +14,10 @@ function createMcpServer() {
       resources[resourceId] = resourceFn;
     },
     
+    registerTool: (toolId, toolFn, schema) => {
+      tools[toolId] = { fn: toolFn, schema };
+    },
+    
     listen: ({ stdin, stdout }) => {
       // Redirect console.log to stderr to avoid interfering with JSON-RPC
       const originalConsoleLog = console.log;
@@ -51,7 +55,7 @@ function createMcpServer() {
             
             // Process each complete message
             for (const message of messages) {
-              handleMessage(message, stdout);
+              handleMessage(message, stdout, resources, tools);
             }
           }
         } catch (error) {
@@ -83,7 +87,7 @@ function tryParseMessages(buffer) {
 }
 
 // Handle incoming JSON-RPC messages
-function handleMessage(message, stdout) {
+function handleMessage(message, stdout, resources, tools) {
   if (!message.jsonrpc || message.jsonrpc !== '2.0') {
     sendErrorResponse(stdout, message.id, -32600, 'Invalid Request');
     return;
@@ -97,13 +101,13 @@ function handleMessage(message, stdout) {
       handleResourcesList(message, stdout);
       break;
     case 'resources/get':
-      handleResourcesGet(message, stdout);
+      handleResourcesGet(message, stdout, resources);
       break;
     case 'tools/list':
-      handleToolsList(message, stdout);
+      handleToolsList(message, stdout, tools);
       break;
     case 'tools/call':
-      handleToolsCall(message, stdout);
+      handleToolsCall(message, stdout, tools);
       break;
     case 'prompts/list':
       handlePromptsList(message, stdout);
@@ -154,7 +158,7 @@ function handleResourcesList(message, stdout) {
 }
 
 // Handle resources/get request
-function handleResourcesGet(message, stdout) {
+function handleResourcesGet(message, stdout, resources) {
   const resourceId = message.params?.resourceId;
   
   if (resourceId === 'pdf://operations') {
@@ -187,7 +191,7 @@ function handleResourcesGet(message, stdout) {
 }
 
 // Handle tools/list request
-function handleToolsList(message, stdout) {
+function handleToolsList(message, stdout, tools) {
   const response = {
     jsonrpc: '2.0',
     id: message.id,
@@ -409,7 +413,7 @@ function handleToolsList(message, stdout) {
 }
 
 // Handle tools/call request
-function handleToolsCall(message, stdout) {
+function handleToolsCall(message, stdout, tools) {
   const { toolId, params } = message.params || {};
   
   if (!toolId) {
@@ -574,6 +578,199 @@ server.registerResource('pdf://operations', async () => {
       'list_allowed_directories'
     ]
   };
+});
+
+// Register all tools
+server.registerTool('merge_pdfs', async (params) => {
+  return await manipulator.merge(params);
+}, {
+  type: 'object',
+  properties: {
+    paths: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Paths to PDF files to merge'
+    },
+    outputPath: {
+      type: 'string',
+      description: 'Path to save the merged PDF'
+    }
+  },
+  required: ['paths', 'outputPath']
+});
+
+server.registerTool('split_pdf', async (params) => {
+  return await manipulator.split(params);
+}, {
+  type: 'object',
+  properties: {
+    path: {
+      type: 'string',
+      description: 'Path to the PDF file to split'
+    },
+    ranges: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          start: { type: 'number' },
+          end: { type: 'number' }
+        }
+      },
+      description: 'Array of page ranges, e.g., [{start: 0, end: 2}, {start: 3, end: 5}]'
+    },
+    outputPattern: {
+      type: 'string',
+      description: 'Pattern for output files, e.g., "/path/to/output_{index}.pdf"'
+    }
+  },
+  required: ['path', 'ranges', 'outputPattern']
+});
+
+server.registerTool('remove_pages', async (params) => {
+  return await manipulator.remove(params);
+}, {
+  type: 'object',
+  properties: {
+    path: {
+      type: 'string',
+      description: 'Path to the PDF file'
+    },
+    pages: {
+      type: 'array',
+      items: { type: 'number' },
+      description: 'Pages to remove (0-indexed)'
+    },
+    outputPath: {
+      type: 'string',
+      description: 'Path to save the modified PDF'
+    }
+  },
+  required: ['path', 'pages', 'outputPath']
+});
+
+server.registerTool('rotate_pdf', async (params) => {
+  return await manipulator.rotate(params);
+}, {
+  type: 'object',
+  properties: {
+    path: {
+      type: 'string',
+      description: 'Path to the PDF file'
+    },
+    degrees: {
+      type: 'number',
+      enum: [0, 90, 180, 270, 360],
+      description: 'Rotation angle'
+    },
+    pages: {
+      type: 'array',
+      items: { type: 'number' },
+      description: 'Pages to rotate (0-indexed, optional - all pages if not specified)'
+    },
+    outputPath: {
+      type: 'string',
+      description: 'Path to save the rotated PDF'
+    }
+  },
+  required: ['path', 'degrees', 'outputPath']
+});
+
+server.registerTool('organize_pdf', async (params) => {
+  return await manipulator.organize(params);
+}, {
+  type: 'object',
+  properties: {
+    path: {
+      type: 'string',
+      description: 'Path to the PDF file'
+    },
+    actions: {
+      type: 'array',
+      description: 'Array of operations (remove, insert, replace, rotate, move)'
+    },
+    outputPath: {
+      type: 'string',
+      description: 'Path to save the modified PDF'
+    }
+  },
+  required: ['path', 'actions', 'outputPath']
+});
+
+server.registerTool('pdf_to_images', async (params) => {
+  return await converter.pdf2img(params);
+}, {
+  type: 'object',
+  properties: {
+    path: {
+      type: 'string',
+      description: 'Path to the PDF file'
+    },
+    outputDir: {
+      type: 'string',
+      description: 'Directory to save the images'
+    },
+    outputFormat: {
+      type: 'string',
+      enum: ['jpeg', 'png'],
+      description: 'Output image format'
+    },
+    scale: {
+      type: 'number',
+      description: 'Scale factor (optional)'
+    },
+    range: {
+      type: 'object',
+      properties: {
+        start: { type: 'number' },
+        end: { type: 'number' }
+      },
+      description: 'Page range to convert (optional)'
+    }
+  },
+  required: ['path', 'outputDir', 'outputFormat']
+});
+
+server.registerTool('images_to_pdf', async (params) => {
+  return await converter.img2pdf(params);
+}, {
+  type: 'object',
+  properties: {
+    paths: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Paths to image files'
+    },
+    outputPath: {
+      type: 'string',
+      description: 'Path to save the PDF'
+    },
+    scale: {
+      type: 'number',
+      description: 'Scale factor (optional)'
+    },
+    size: {
+      type: 'object',
+      properties: {
+        width: { type: 'number' },
+        height: { type: 'number' }
+      },
+      description: 'Page size in mm (optional)'
+    },
+    margin: {
+      type: 'array',
+      items: { type: 'number' },
+      description: 'Margins in mm [top, right, bottom, left] (optional)'
+    }
+  },
+  required: ['paths', 'outputPath']
+});
+
+server.registerTool('list_allowed_directories', async () => {
+  return allowedDirectories;
+}, {
+  type: 'object',
+  properties: {}
 });
 
 // Start listening for commands
