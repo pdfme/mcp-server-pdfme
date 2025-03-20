@@ -35,45 +35,45 @@ const tools = {
 const server = new Server({ name: "mcp-server-pdfme", version: "0.0.1" });
 
 // Call tool
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  try {
-    const { name, arguments: args } = request.params;
-    const tool = tools[name as keyof typeof tools];
+// server.setRequestHandler(CallToolRequestSchema, async (request) => {
+//   try {
+//     const { name, arguments: args } = request.params;
+//     const tool = tools[name as keyof typeof tools];
 
-    if (!tool) {
-      throw new Error(`Unknown tool: ${name}`);
-    }
+//     if (!tool) {
+//       throw new Error(`Unknown tool: ${name}`);
+//     }
 
-    const parsed = tool.schema.safeParse(args);
-    if (!parsed.success) {
-      throw new Error(`Invalid arguments for ${name}: ${parsed.error}`);
-    }
+//     const parsed = tool.schema.safeParse(args);
+//     if (!parsed.success) {
+//       throw new Error(`Invalid arguments for ${name}: ${parsed.error}`);
+//     }
 
-    return tool.handler(parsed.data);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `Error: ${errorMessage}` }],
-      isError: true,
-    };
-  }
-});
+//     return tool.handler(parsed.data);
+//   } catch (error) {
+//     const errorMessage = error instanceof Error ? error.message : String(error);
+//     return {
+//       content: [{ type: "text", text: `Error: ${errorMessage}` }],
+//       isError: true,
+//     };
+//   }
+// });
 
-// List tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: Object.entries(tools).map(([name, tool]) => ({
-      name,
-      description: tool.description,
-      inputSchema: zodToJsonSchema(tool.schema) as ToolInput,
-    })),
-  };
-});
+// // List tools
+// server.setRequestHandler(ListToolsRequestSchema, async () => {
+//   return {
+//     tools: Object.entries(tools).map(([name, tool]) => ({
+//       name,
+//       description: tool.description,
+//       inputSchema: zodToJsonSchema(tool.schema) as ToolInput,
+//     })),
+//   };
+// });
 
 // Start server
 async function runServer() {
-  console.log('pdf2img', pdf2img);
-  console.log('img2pdf', img2pdf);
+  // console.log('pdf2img', pdf2img);
+  // console.log('img2pdf', img2pdf);
   console.log('merge', merge);
   console.log('split', split);
   const transport = new StdioServerTransport();

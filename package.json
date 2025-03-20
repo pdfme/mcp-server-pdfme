@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/*.js",
+    "start": "node dist/index.js",
     "prepare": "npm run build",
     "watch": "tsc --watch"
   },
@@ -24,7 +25,6 @@
     "@pdfme/converter": "^5.3.14",
     "@pdfme/manipulator": "^5.3.14",
     "canvas": "^2.11.2",
-    "glob": "^10.3.10",
     "zod-to-json-schema": "^3.23.5"
   },
   "devDependencies": {
