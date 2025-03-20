@@ -21,6 +21,7 @@
     "@pdfme/common": "^5.3.13",
     "@pdfme/converter": "^5.3.13",
     "@pdfme/manipulator": "^5.3.13",
+    "pdfjs-dist": "2.16.105",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
